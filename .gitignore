@@ -1,0 +1,11 @@
+# virtual environment
+venv
+.venv
+env
+.env
+
+# vs code specific
+.vscode
+
+# python related cache
+__pycache__
