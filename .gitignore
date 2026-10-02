@@ -9,3 +9,6 @@ env
 
 # python related cache
 __pycache__
+
+# solutions
+notebooks/solutions/0_setup.ipynb
