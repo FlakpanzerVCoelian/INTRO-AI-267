@@ -9,7 +9,7 @@ CELL_SIZE = 35
 GRID_WIDTH, GRID_HEIGHT = 20, 20
 WIDTH = GRID_WIDTH * CELL_SIZE
 GAME_HEIGHT = GRID_HEIGHT * CELL_SIZE
-STATUS_BAR = True
+STATUS_BAR = False
 BAR_HEIGHT = 2*CELL_SIZE  if STATUS_BAR else 0 # Height of the top status bar
 TOTAL_HEIGHT = GAME_HEIGHT + BAR_HEIGHT
 N_OBSTACLES = 10
@@ -137,12 +137,11 @@ class VacuumWorld(gym.Env):
             pygame.init()
             pygame.font.init()
 
-            font_path = os.path.join(RESOURCES_PATH, "font", "minecraft", "Minecraft.ttf")
+            font_path = f"{RESOURCES_PATH}font/minecraft/Minecraft.ttf"
             
             try:
                 self.font = pygame.font.Font(font_path, 16)
             except FileNotFoundError:
-                print(f"Warning: Custom font not found at {font_path}. Falling back to Arial.")
                 self.font = pygame.font.SysFont("Arial", 24, bold=True)
             
             if self.render_mode == "human":
