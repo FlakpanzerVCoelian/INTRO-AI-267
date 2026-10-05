@@ -2,6 +2,7 @@
 from scripts import *
 from scripts.agent import Agent
 import pygame
+import sys
 import gymnasium as gym
 
 def run_episode(env: gym.Env, agent: Agent, render: bool = True) -> float:
@@ -17,7 +18,7 @@ def run_episode(env: gym.Env, agent: Agent, render: bool = True) -> float:
     terminated = False
     truncated = False
 
-    while not (terminated or truncated):
+    while not terminated and not truncated:
         
         action = agent.act(observation)
 
@@ -34,6 +35,7 @@ def run_episode(env: gym.Env, agent: Agent, render: bool = True) -> float:
 
         total_reward += reward
 
+    env.close()
     return total_reward
 
 def human_testing(env: gym.Env):
@@ -44,7 +46,7 @@ def human_testing(env: gym.Env):
     truncated = False
     current_action = 0
 
-    while not (done or truncated):
+    while not done and not truncated:
 
         current_action = 4
 

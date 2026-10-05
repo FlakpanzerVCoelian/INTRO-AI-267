@@ -6,7 +6,7 @@ import numpy as np
 import pygame
 
 CELL_SIZE = 35
-GRID_WIDTH, GRID_HEIGHT = 20, 20
+GRID_WIDTH, GRID_HEIGHT = 5,3
 WIDTH = GRID_WIDTH * CELL_SIZE
 GAME_HEIGHT = GRID_HEIGHT * CELL_SIZE
 STATUS_BAR = False
@@ -292,18 +292,16 @@ class VacuumWorld(gym.Env):
             # 2 stands for wall
             # 3 stands for vacuum cleaner
             # other numbers will stand for other things
-            grid = np.zeros((GRID_HEIGHT, GRID_WIDTH), dtype=np.uint8)
+            grid = np.zeros((GRID_WIDTH, GRID_HEIGHT), dtype=np.uint8)
 
-            for dirt in self.dirts:
-                y, x = dirt
-                grid[y, x] = 1
+            for x, y in self.dirts:
+                grid[x, y] = 1
 
-            for wall in self.walls:
-                y, x = wall
-                grid[y, x] = 2
+            for x, y in self.walls:
+                grid[x, y] = 2
             
-            y, x = self.vacuum
-            grid[y, x] = 3
+            x, y = self.vacuum
+            grid[x, y] = 3
 
             return grid
 
