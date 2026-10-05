@@ -1,7 +1,7 @@
 """This runner utility is linked to the Vacuum World environment"""
 from scripts import *
 from scripts.agent import Agent
-
+import pygame
 import gymnasium as gym
 
 def run_episode(env: gym.Env, agent: Agent, render: bool = True) -> float:
@@ -26,6 +26,12 @@ def run_episode(env: gym.Env, agent: Agent, render: bool = True) -> float:
         if render:
             env.render()
 
+        if env.window is not None:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    env.close()
+                    truncated = True
+
         total_reward += reward
 
     return total_reward
@@ -33,7 +39,6 @@ def run_episode(env: gym.Env, agent: Agent, render: bool = True) -> float:
 def human_testing(env: gym.Env):
     """Assumes that a human player is playing, so env.render_mode = RenderMode.HUMAN"""
     assert env.render_mode == RenderMode.HUMAN
-    import pygame
 
     done = False
     truncated = False
@@ -44,6 +49,10 @@ def human_testing(env: gym.Env):
         current_action = 4
 
         if env.window is not None:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    env.close()
+
             for event in pygame.event.get(pygame.KEYDOWN):
                 if event.key == pygame.K_w:
                     current_action = 0
@@ -59,6 +68,12 @@ def human_testing(env: gym.Env):
         _, _, done, truncated, _ = env.step(current_action)
 
         env.render()
+
+        if env.window is not None:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    env.close()
+                    truncated = True
 
     env.close()
 
