@@ -5,18 +5,9 @@ import os
 import numpy as np
 import pygame
 
-CELL_SIZE = 35
-GRID_WIDTH, GRID_HEIGHT = 4, 3 # this is indeed needed for difficulty = 0
-WIDTH = GRID_WIDTH * CELL_SIZE
-GAME_HEIGHT = GRID_HEIGHT * CELL_SIZE
-STATUS_BAR = False
-BAR_HEIGHT = 2*CELL_SIZE  if STATUS_BAR else 0 # Height of the top status bar
-TOTAL_HEIGHT = GAME_HEIGHT + BAR_HEIGHT
-N_OBSTACLES = 10
-FPS = 10
+from scripts.setting import *
 
 RESOURCES_PATH = "scripts/resources/"
-
 SEED = 0
 
 class VacuumWorld(gym.Env):
@@ -53,14 +44,16 @@ class VacuumWorld(gym.Env):
         grid[y, x]
     """
 
-    metadata = {
-        "render_modes": ["human", "rgb_array"],
-        "render_fps": FPS,
-    }
-
     def __init__(self, render_mode=RenderMode.HUMAN, observation_type=ObservationType.GRID, max_step=600, difficulty=0, n_obstacles=10, n_dirt=1, **kwargs):
     
         super().__init__()
+
+        self.setting = GameSetting(difficulty)
+
+        self.metadata = {
+                "render_modes": ["human", "rgb_array"],
+                "render_fps": self.setting.fps,
+            }
 
         # Convert Enum -> string if necessary
         if isinstance(render_mode, RenderMode):
@@ -89,13 +82,13 @@ class VacuumWorld(gym.Env):
         self.n_obstacles = n_obstacles
         self.n_dirt = n_dirt
 
-        self.status_bar = STATUS_BAR
+        self.status_bar = self.setting.status_bar
 
         self.action_space = spaces.Discrete(6) # 0=UP, 1=DOWN, 2=LEFT, 3=RIGHT, 4=IDLE, 5=SUCK
 
         if self.observation_type == ObservationType.IMAGE :
             self.observation_space = spaces.Box(
-                low=0, high=255, shape=(TOTAL_HEIGHT, WIDTH, 3), dtype=np.uint8
+                low=0, high=255, shape=(self.setting.total_height, self.setting.width, 3), dtype=np.uint8
             )
         else:
             # 0 = clean floor
@@ -103,7 +96,7 @@ class VacuumWorld(gym.Env):
             # 2 = wall
             # 3 = vacuum
             self.observation_space = spaces.Box(
-                low=0, high=4, shape=(GRID_HEIGHT, GRID_WIDTH), dtype=np.uint8
+                low=0, high=4, shape=(self.setting.grid_height, self.setting.grid_width), dtype=np.uint8
             )
 
         self.window = None
@@ -132,6 +125,7 @@ class VacuumWorld(gym.Env):
         self.reset()
 
     def _setup_window(self):
+
         """Initialize Pygame and the correct render mode."""
         if not pygame.get_init():
             pygame.init()
@@ -151,14 +145,14 @@ class VacuumWorld(gym.Env):
             self.font = pygame.font.SysFont("Arial", 24, bold=True)
         
         if self.render_mode == "human":
-            self.window = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT))
+            self.window = pygame.display.set_mode((self.setting.width, self.setting.total_height))
             pygame.display.set_caption("Vaccum Environment")
             self.clock = pygame.time.Clock()
         else:
             try:
-                self.canvas = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT), pygame.HIDDEN)
+                self.canvas = pygame.display.set_mode((self.setting.width, self.setting.total_height), pygame.HIDDEN)
             except pygame.error:
-                self.canvas = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT))
+                self.canvas = pygame.display.set_mode((self.setting.width, self.setting.total_height))
 
     def _load_and_scale_sprites(self):
         """Loads assets and resizes them to match the environment's CELL_SIZE."""
@@ -166,7 +160,7 @@ class VacuumWorld(gym.Env):
         def load_sp(path):
             try:
                 img = pygame.image.load(path).convert_alpha()
-                return pygame.transform.scale(img, (CELL_SIZE, CELL_SIZE))
+                return pygame.transform.scale(img, (self.setting.cell_size, self.setting.cell_size))
             except FileNotFoundError:
                 return None
         
@@ -186,26 +180,23 @@ class VacuumWorld(gym.Env):
         self.walls = set()
         self.dirts = set()
 
-        if self.difficulty == 0:
+        if self.difficulty == 0 or self.difficulty == 1:
             # Vertical wall dividing the house into two rooms.
-            wall_x = GRID_WIDTH // 2
+            wall_x = self.setting.grid_width // 2
 
             # Leave one doorway in the middle.
-            doorway_y = GRID_HEIGHT // 2
+            doorway_y = self.setting.grid_height // 2
 
-            for y in range(GRID_HEIGHT):
+            for y in range(self.setting.grid_height):
                 if y != doorway_y:
                     self.walls.add((wall_x, y))
 
             # Walls all around
-            for x in range (GRID_WIDTH):
-                for y in range (GRID_HEIGHT):
-                    if x == 0 or x == (GRID_WIDTH - 1) or y == 0 or y == (GRID_HEIGHT - 1):
+            for x in range (self.setting.grid_width):
+                for y in range (self.setting.grid_height):
+                    if x == 0 or x == (self.setting.grid_width - 1) or y == 0 or y == (self.setting.grid_height - 1):
                         self.walls.add((x, y))
-
-            
-        elif self.difficulty == 1:
-            pass
+    
         elif self.difficulty == 2:
             pass
         else:
@@ -222,7 +213,7 @@ class VacuumWorld(gym.Env):
 
         self._generate_map()
 
-        valid_cells = [(x, y) for x in range(GRID_WIDTH) for y in range(GRID_HEIGHT) if (x, y) not in self.walls]
+        valid_cells = [(x, y) for x in range(self.setting.grid_width) for y in range(self.setting.grid_height) if (x, y) not in self.walls]
 
         # if difficulty > 0 : also obsttacles to take in account
 
@@ -238,12 +229,8 @@ class VacuumWorld(gym.Env):
         self.direction = (0, -1)
 
         dirt_candidates = valid_cells
-
-        if self.difficulty == 0:
-            number_of_dirt = 1
-
-        else:
-            number_of_dirt = min(self.n_dirt, len(dirt_candidates))
+        
+        number_of_dirt = min(self.setting.n_dirt, len(dirt_candidates))
 
         if number_of_dirt > 0:
             dirt_indices = self.np_random.choice(len(dirt_candidates), size=number_of_dirt, replace=False)
@@ -262,25 +249,25 @@ class VacuumWorld(gym.Env):
     def _blit_background(self, reset = True):
 
         if reset or self.floor_background is None: # Setting for the first time everything
-            self.floor_background = pygame.Surface((WIDTH, GAME_HEIGHT))
+            self.floor_background = pygame.Surface((self.setting.width, self.setting.height))
             # render the house layout (without dirts or anything)
             floor_sprite = self.sprites["component_floor"]
             if floor_sprite is not None:
-                for x in range(GRID_HEIGHT):
-                    for y in range(GRID_WIDTH):
-                        position = (x * CELL_SIZE, y * CELL_SIZE)
+                for x in range(self.setting.grid_height):
+                    for y in range(self.setting.grid_width):
+                        position = (x * self.setting.cell_size, y * self.setting.cell_size)
                         self.floor_background.blit(self.sprites["component_floor"], position)
 
                         if floor_sprite is not None:
                             self.floor_background.blit(floor_sprite, position )
 
                         else:
-                            pygame.draw.rect(self.floor_background, (180, 180, 180), (*position, CELL_SIZE, CELL_SIZE))
+                            pygame.draw.rect(self.floor_background, (180, 180, 180), (*position, self.setting.cell_size, self.setting.cell_size))
 
             for x, y in self.walls:
-                position = (x * CELL_SIZE, y * CELL_SIZE)
-                pygame.draw.rect(self.floor_background, (50, 50, 50), (*position, CELL_SIZE, CELL_SIZE))
-                pygame.draw.rect(self.floor_background, (20, 20, 20), (*position, CELL_SIZE, CELL_SIZE), width=2)   
+                position = (x * self.setting.cell_size, y * self.setting.cell_size)
+                pygame.draw.rect(self.floor_background, (50, 50, 50), (*position, self.setting.cell_size, self.setting.cell_size))
+                pygame.draw.rect(self.floor_background, (20, 20, 20), (*position, self.setting.cell_size, self.setting.cell_size), width=2)   
 
     def _get_obs(self, done = False):
         if done:
@@ -298,7 +285,7 @@ class VacuumWorld(gym.Env):
             # 2 stands for wall
             # 3 stands for vacuum cleaner
             # other numbers will stand for other things
-            grid = np.zeros((GRID_WIDTH, GRID_HEIGHT), dtype=np.uint8)
+            grid = np.zeros((self.setting.grid_width, self.setting.grid_height), dtype=np.uint8)
 
             for x, y in self.dirts:
                 grid[x, y] = 1
@@ -357,7 +344,7 @@ class VacuumWorld(gym.Env):
 
             new_x, new_y = position
 
-            if (0 <= new_x < GRID_WIDTH and 0 <= new_y < GRID_HEIGHT and (new_x, new_y) not in self.walls):
+            if (0 <= new_x < self.setting.grid_width and 0 <= new_y < self.setting.grid_height and (new_x, new_y) not in self.walls):
                 legal.append(candidate_action)
 
         if action is None:
@@ -445,34 +432,34 @@ class VacuumWorld(gym.Env):
             score_text = self.font.render(f"Score {self.score}", True, (255, 215, 0))
             time_text = self.font.render(f"Time {time_str}", True, (255, 255, 255))
             
-            text_y = (BAR_HEIGHT - diff_text.get_height()) // 2
+            text_y = (self.setting.bar_height - diff_text.get_height()) // 2
             paint_surface.blit(diff_text, (20, text_y))
-            paint_surface.blit(score_text, (WIDTH // 2 - score_text.get_width() // 2, text_y))
-            paint_surface.blit(time_text, (WIDTH - time_text.get_width() - 20, text_y))
+            paint_surface.blit(score_text, (self.setting.width // 2 - score_text.get_width() // 2, text_y))
+            paint_surface.blit(time_text, (self.setting.width - time_text.get_width() - 20, text_y))
 
         # Floor background + walls
-        paint_surface.blit(self.floor_background, (0, BAR_HEIGHT))
+        paint_surface.blit(self.floor_background, (0, self.setting.bar_height))
 
         dirt_sprite = self.sprites["component_dirt"]
 
         # Dirts
         for x, y in self.dirts:
-            screen_pos = (x * CELL_SIZE, y * CELL_SIZE + BAR_HEIGHT)
+            screen_pos = (x * self.setting.cell_size, y * self.setting.cell_size + self.setting.bar_height)
             if dirt_sprite is not None:
                 paint_surface.blit(dirt_sprite, screen_pos)
             else:
-                pygame.draw.circle(paint_surface, (100, 70, 30), ( x * CELL_SIZE + CELL_SIZE // 2,  y * CELL_SIZE + BAR_HEIGHT + + CELL_SIZE // 2), CELL_SIZE // 4)
+                pygame.draw.circle(paint_surface, (100, 70, 30), ( x * self.setting.cell_size + self.setting.cell_size // 2,  y * self.setting.cell_size + self.setting.bar_height + self.setting.cell_size // 2), self.setting.cell_size // 4)
 
         # Vacuum cleaner
         x, y = self.vacuum
-        screen_pos = (x * CELL_SIZE, y * CELL_SIZE + BAR_HEIGHT)
+        screen_pos = (x * self.setting.cell_size, y * self.setting.cell_size + self.setting.bar_height)
         vacuum_sprite = self.sprites["component_cleaner"]
         if vacuum_sprite is not None:
             angle = self._get_rotation_angle(self.direction)
             rotated_vacum = pygame.transform.rotate(vacuum_sprite, angle)
             paint_surface.blit(rotated_vacum, screen_pos)
         else:
-            pygame.draw.circle(paint_surface, (40, 100, 220), ( x * CELL_SIZE + CELL_SIZE // 2,  y * CELL_SIZE + BAR_HEIGHT + + CELL_SIZE // 2), CELL_SIZE // 3)
+            pygame.draw.circle(paint_surface, (40, 100, 220), ( x * self.setting.cell_size + self.setting.cell_size // 2,  y * self.setting.cell_size + self.setting.bar_height + self.setting.cell_size // 2), self.setting.cell_size // 3)
 
         img_array = pygame.surfarray.array3d(paint_surface)
 

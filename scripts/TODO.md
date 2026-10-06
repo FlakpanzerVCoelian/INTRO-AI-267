@@ -1,4 +1,4 @@
 # TODO LIST
 
-[ ] Fix the clock
-[ ] Create the sprites for the environment
+[ ] Finishing last chapter for notebook 0
+[ ] Finishing last chapter for notebook 1
