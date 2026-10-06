@@ -6,7 +6,7 @@ import numpy as np
 import pygame
 
 CELL_SIZE = 35
-GRID_WIDTH, GRID_HEIGHT = 5,3
+GRID_WIDTH, GRID_HEIGHT = 4, 3 # this is indeed needed for difficulty = 0
 WIDTH = GRID_WIDTH * CELL_SIZE
 GAME_HEIGHT = GRID_HEIGHT * CELL_SIZE
 STATUS_BAR = False
@@ -133,27 +133,32 @@ class VacuumWorld(gym.Env):
 
     def _setup_window(self):
         """Initialize Pygame and the correct render mode."""
-        if self.window is None and self.canvas is None:
+        if not pygame.get_init():
             pygame.init()
+        if not pygame.display.get_init():
+            pygame.display.init()
+        if not pygame.font.get_init():
             pygame.font.init()
 
-            font_path = f"{RESOURCES_PATH}font/minecraft/Minecraft.ttf"
-            
+        if self.window is not None or self.canvas is not None:
+            return
+
+        font_path = f"{RESOURCES_PATH}font/minecraft/Minecraft.ttf"
+        
+        try:
+            self.font = pygame.font.Font(font_path, 16)
+        except FileNotFoundError:
+            self.font = pygame.font.SysFont("Arial", 24, bold=True)
+        
+        if self.render_mode == "human":
+            self.window = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT))
+            pygame.display.set_caption("Vaccum Environment")
+            self.clock = pygame.time.Clock()
+        else:
             try:
-                self.font = pygame.font.Font(font_path, 16)
-            except FileNotFoundError:
-                self.font = pygame.font.SysFont("Arial", 24, bold=True)
-            
-            if self.render_mode == "human":
-                self.window = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT))
-                pygame.display.set_caption("Vaccum Environment")
-                self.clock = pygame.time.Clock()
-            else:
-                os.environ["SDL_VIDEODRIVER"] = "dummy"
-                try:
-                    self.canvas = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT), pygame.HIDDEN)
-                except pygame.error:
-                    self.canvas = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT))
+                self.canvas = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT), pygame.HIDDEN)
+            except pygame.error:
+                self.canvas = pygame.display.set_mode((WIDTH, TOTAL_HEIGHT))
 
     def _load_and_scale_sprites(self):
         """Loads assets and resizes them to match the environment's CELL_SIZE."""
@@ -192,6 +197,7 @@ class VacuumWorld(gym.Env):
                 if y != doorway_y:
                     self.walls.add((wall_x, y))
 
+            # Walls all around
             for x in range (GRID_WIDTH):
                 for y in range (GRID_HEIGHT):
                     if x == 0 or x == (GRID_WIDTH - 1) or y == 0 or y == (GRID_HEIGHT - 1):
@@ -363,6 +369,7 @@ class VacuumWorld(gym.Env):
         return self.score
 
     def step(self, action):
+
         if not self.action_space.contains(action):
             raise ValueError(f"Invalid action {action}")
 
@@ -480,17 +487,16 @@ class VacuumWorld(gym.Env):
         return frame.astype(np.uint8)
     
     def render(self):
+        if self.render_mode == "human":
+            if not pygame.get_init() or not pygame.display.get_init():
+                self._setup_window()
+
         frame = self._render_frame()
 
         if self.render_mode == "rgb_array":
             return frame
 
         if self.render_mode == "human":
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.close()
-                    return False
-
             pygame.display.flip()
             self.clock.tick(self.metadata["render_fps"])
             return True

@@ -5,6 +5,11 @@ import pygame
 import sys
 import gymnasium as gym
 
+import multiprocessing as mp
+from functools import wraps
+from scripts.environment import VacuumWorld, RenderMode
+from scripts.agent import Agent
+
 def run_episode(env: gym.Env, agent: Agent, render: bool = True) -> float:
     """Run one episode and return the accumulated reward."""
 
@@ -39,43 +44,38 @@ def run_episode(env: gym.Env, agent: Agent, render: bool = True) -> float:
     return total_reward
 
 def human_testing(env: gym.Env):
-    """Assumes that a human player is playing, so env.render_mode = RenderMode.HUMAN"""
-    assert env.render_mode == RenderMode.HUMAN
+    """Allows a human player to control the environment frame-by-frame."""
+    assert env.render_mode == "human"
 
     done = False
     truncated = False
-    current_action = 0
+
+    KEY_MAP = {
+        pygame.K_w: 0,  # UP
+        pygame.K_s: 1,  # DOWN
+        pygame.K_a: 2,  # LEFT
+        pygame.K_d: 3,  # RIGHT
+        pygame.K_e: 4,  # IDLE
+        pygame.K_q: 5,  # SUCK
+    }
+
+    env.render()
 
     while not done and not truncated:
+        action = 4
 
-        current_action = 4
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                env.close()
+                return
 
-        if env.window is not None:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    env.close()
+            if event.type == pygame.KEYDOWN:
+                if event.key in KEY_MAP:
+                    action = KEY_MAP[event.key]
 
-            for event in pygame.event.get(pygame.KEYDOWN):
-                if event.key == pygame.K_w:
-                    current_action = 0
-                elif event.key == pygame.K_s:
-                    current_action = 1
-                elif event.key == pygame.K_a:
-                    current_action = 2
-                elif event.key == pygame.K_d:
-                    current_action = 3
-                elif event.key == pygame.K_q:
-                    current_action = 5
-        
-        _, _, done, truncated, _ = env.step(current_action)
+        _, reward, done, truncated, info = env.step(action)
 
         env.render()
-
-        if env.window is not None:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    env.close()
-                    truncated = True
 
     env.close()
 
@@ -94,5 +94,4 @@ if __name__ == '__main__':
     from scripts.agent import RandomAgent
 
     env = VacuumWorld()
-    ag = RandomAgent(env)
-    run_episode(env, ag)
+    human_testing(env)
