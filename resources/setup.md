@@ -42,7 +42,7 @@ cd path/to/where/you/want
 And then just clone the repository:
 
 ```bash
-git clone https://github.com/<username>/<repository>.git .
+git clone https://github.com/frekkoz3/Introduction-to-Artificial-Intelligence-2026-2027 .
 ```
 
 Open the folder from VS Code (as simple as breathing!):
