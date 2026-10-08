@@ -295,6 +295,8 @@ class VacuumWorld(gym.Env):
             
             x, y = self.vacuum
             grid[x, y] = 3
+            if self.vacuum in self.dirts:
+                grid[x, y] = 3.5 # special case
 
             return grid
 
