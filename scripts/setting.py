@@ -1,8 +1,8 @@
 class GameSetting:
 
     def __init__(self, difficulty : int =  0):
-        if difficulty not in (0, 1):
-            raise ValueError(f"Unsupported difficulty {difficulty!r}. Supported levels: 0 and 1.")
+        if difficulty not in (0, 1, 2):
+            raise ValueError(f"Unsupported difficulty {difficulty!r}. Supported levels: 0, 1 and 2.")
         self.difficulty = difficulty
         self.cell_size = 35
         self._load_variable_settings()
@@ -21,9 +21,18 @@ class GameSetting:
             self.grid_height = 3
             self.n_obstacles = 0
             self.n_dirt = 1
+            self.n_water = 0
 
         if self.difficulty == 1:
             self.grid_width = 10
             self.grid_height = 10
             self.n_obstacles = 0
             self.n_dirt = 10
+            self.n_water = 0
+
+        if self.difficulty == 2:
+            self.grid_width = 10
+            self.grid_height = 10
+            self.n_obstacles = 0
+            self.n_dirt = 10
+            self.n_water = 10
